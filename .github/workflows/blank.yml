@@ -74,3 +74,37 @@ jobs:
         run: |
           echo Add other actions to build,
           echo test, and deploy your project.
+
+# Steps for executing the deployment against Cloudhub Anypoint Platform
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:    
+    - uses: actions/checkout@v3
+    - uses: actions/cache@v3
+      with:
+        path: ~/.m2/repository
+        key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+        restore-keys: |
+          ${{ runner.os }}-maven-
+    - uses: actions/download-artifact@v3
+      with:
+        name: artifacts
+
+    - uses: s4u/maven-settings-action@v2.6.0
+      with:
+        servers: |
+          [{
+              "id": "anypoint-exchange-v3",
+              "username": "${{ secrets.ANYPOINT_USERNAME }}",
+              "password": "${{ secrets.ANYPOINT_PASSWORD }}"
+          }]
+    - name: Deploy to CloudHub
+      env:
+        AUTHOR: "Andres Morales"
+      run: |
+        artifactName=$(ls *.jar | head -1)
+        mvn deploy -DmuleDeploy -Dusername=${{secrets.ANYPOINT_USERNAME}} \
+        -Dpassword=${{secrets.ANYPOINT_PASSWORD}} \
+        -Ddeployment.name="cicd-msg-acm1507" \
+        -Dmessage="Welcome Angel this app rocks!!"
